@@ -1,0 +1,61 @@
+#
+#  Copyright 2024, Zentao
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+services:
+
+# db service for zentao
+  zentao-db:
+    image: bitnami/mariadb:10.6
+    container_name: zentao-db
+    pull_policy: if_not_present
+    restart: always
+    volumes:
+      - 'zentao_db:/bitnami/mariadb'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - MARIADB_ROOT_PASSWORD=pass4Zentao
+      - MARIADB_DATABASE=zentao
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+    healthcheck:
+      test: ['CMD', '/opt/bitnami/scripts/mariadb/healthcheck.sh']
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+# zentao service
+  zentao:
+    image: easysoft/zentao
+    container_name: zentao
+    pull_policy: always
+    restart: always
+    ports:
+      - '80:80'
+    volumes:
+      - 'zentao_data:/data'
+    depends_on:
+      - zentao-db
+    environment:
+      - ZT_MYSQL_HOST=zentao-db
+      - ZT_MYSQL_PORT=3306
+      - ZT_MYSQL_USER=root
+      - ZT_MYSQL_PASSWORD=pass4Zentao
+      - ZT_MYSQL_DB=zentao
+
+# persistence for mysql and zentao
+volumes:
+  zentao_db:
+  zentao_data:

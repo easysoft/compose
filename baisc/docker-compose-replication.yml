@@ -1,0 +1,93 @@
+#
+#  Copyright 2024, Zentao
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+services:
+
+# db service for zentao
+  zentao-db-master:
+    image: bitnami/mariadb:10.6
+    container_name: zentao-db-master
+    pull_policy: if_not_present
+    restart: always
+    volumes:
+      - 'zentao_db_master:/bitnami/mariadb'
+    environment:
+      - MARIADB_ROOT_PASSWORD=pass4Zentao
+      - MARIADB_DATABASE=zentao
+      - MARIADB_USER=my_user
+      - MARIADB_PASSWORD=my_password
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+      - MARIADB_REPLICATION_MODE=master
+      - MARIADB_REPLICATION_USER=repl_user
+      - MARIADB_REPLICATION_PASSWORD=repl_pass
+    healthcheck:
+      test: ['CMD', '/opt/bitnami/scripts/mariadb/healthcheck.sh']
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  zentao-db-slave:
+    image: bitnami/mariadb:10.6
+    container_name: zentao-db-slave
+    pull_policy: if_not_present
+    restart: always
+    volumes:
+      - 'zentao_db_slave:/bitnami/mariadb'
+    depends_on:
+      - zentao-db-master
+    environment:
+      - MARIADB_USER=my_user
+      - MARIADB_PASSWORD=my_password
+      - MARIADB_DATABASE=zentao
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+      - MARIADB_REPLICATION_MODE=slave
+      - MARIADB_REPLICATION_USER=repl_user
+      - MARIADB_REPLICATION_PASSWORD=repl_pass
+      - MARIADB_MASTER_HOST=zentao-db-master
+      - MARIADB_MASTER_PORT_NUMBER=3306
+      - MARIADB_MASTER_ROOT_PASSWORD=pass4Zentao
+    healthcheck:
+      test: ['CMD', '/opt/bitnami/scripts/mariadb/healthcheck.sh']
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+# zentao service
+  zentao:
+    image: easysoft/zentao
+    container_name: zentao
+    pull_policy: always
+    restart: always
+    ports:
+      - '80:80'
+    volumes:
+      - 'zentao_data:/data'
+    depends_on:
+      - zentao-db-master
+    environment:
+      - ZT_MYSQL_HOST=zentao-db-master
+      - ZT_MYSQL_PORT=3306
+      - ZT_MYSQL_USER=root
+      - ZT_MYSQL_PASSWORD=pass4Zentao
+      - ZT_MYSQL_DB=zentao
+
+# persistence for mysql and zentao
+volumes:
+  zentao_db_master:
+  zentao_db_slave:
+  zentao_data:
